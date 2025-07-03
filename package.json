@@ -1,5 +1,5 @@
 {
-  "name": "Instapure",
+  "name": "instapure",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,7 +7,8 @@
     "build": "next build",
     "build:locales": "python scripts/build_locales.py",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postbuild": "next-sitemap"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
