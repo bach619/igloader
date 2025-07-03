@@ -7,8 +7,8 @@ import { ReactQueryProvider } from "@/features/react-query/react-query-provider"
 import { cn } from "@/lib/utils";
 import { siteMetadata } from "@/lib/site";
 import { getLocale, getMessages } from "next-intl/server";
+import Script from "next/script"; // ✅ Aktifkan untuk GA
 import "./globals.css";
-// import Script from "next/script";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -28,10 +28,24 @@ export default async function RootLayout({
   return (
     <html lang={locale} className="scroll-smooth" suppressHydrationWarning>
       <body className={cn("antialiased", dmSans.variable)}>
+
+        {/* ✅ Google Analytics 4 */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-1342XW5PJX"
+          strategy="afterInteractive"
+        />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-1342XW5PJX');
+          `}
+        </Script>
+
         <LocaleProvider locale={locale} messages={messages}>
           <ThemeProvider defaultTheme="light" enableSystem={false}>
             <ReactQueryProvider>
-
               {children}
               <Toaster closeButton />
             </ReactQueryProvider>
