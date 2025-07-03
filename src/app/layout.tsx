@@ -42,6 +42,7 @@ export default async function RootLayout({
             gtag('config', 'G-1342XW5PJX');
           `}
         </Script>
+        <meta name="google-adsense-account" content="ca-pub-6435811821902528"></meta>
 
         <LocaleProvider locale={locale} messages={messages}>
           <ThemeProvider defaultTheme="light" enableSystem={false}>
