@@ -9,10 +9,11 @@ export default function HomePage() {
   return (
     <div>
 
-        {/* Features Section */}
-      <Adsense />
       {/* Hero Section */}
       <Hero />
+      
+      {/* Features Section */}
+      <Adsense />
 
       {/* Features Section */}
       <Features />

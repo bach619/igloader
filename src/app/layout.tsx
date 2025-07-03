@@ -28,7 +28,6 @@ export default async function RootLayout({
   return (
     <html lang={locale} className="scroll-smooth" suppressHydrationWarning>
       <body className={cn("antialiased", dmSans.variable)}>
-
         {/* ✅ Google Analytics 4 */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-1342XW5PJX"
