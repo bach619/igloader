@@ -1,8 +1,5 @@
-// next-sitemap.config.ts
-
-import { IConfig } from 'next-sitemap';
-
-const config: IConfig = {
+/** @type {import('next-sitemap').IConfig} */
+const config = {
   siteUrl: 'https://instapure.fun',
   generateRobotsTxt: true,
   outDir: './public',
@@ -21,4 +18,4 @@ const config: IConfig = {
   },
 };
 
-export default config;
+module.exports = config;
