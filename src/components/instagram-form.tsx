@@ -83,6 +83,27 @@ function triggerDownload(videoUrl: string) {
   document.body.removeChild(link);
 }
 
+async function downloadWithBlob(videoUrl: string) {
+  try {
+    const response = await fetch(videoUrl);
+    if (!response.ok) throw new Error("Failed to fetch video");
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "IG-Loader-video.mp4";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    toast.error("Download gagal via blob. Silakan coba beberapa saat lagi.", {
+      id: "toast-blob-error",
+      position: "top-center",
+    });
+  }
+}
+
 type CachedUrl = {
   videoUrl?: string;
   expiresAt: number;
@@ -204,6 +225,17 @@ export function InstagramForm(props: { className?: string }) {
           setCachedUrl(shortcode, undefined, {
             messageKey: errorMessageKey,
           });
+        }
+        // Fallback download via blob jika rate limit dan URL video sudah ada di cache
+        if (status === HTTP_CODE_ENUM.TOO_MANY_REQUESTS) {
+          if (cachedUrl?.videoUrl) {
+            await downloadWithBlob(cachedUrl.videoUrl);
+          } else {
+            toast.error(t("toasts.error"), {
+              id: "toast-blob-unavailable",
+              position: "top-center",
+            });
+          }
         }
       } else {
         throw new Error("Failed to fetch video");
