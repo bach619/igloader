@@ -11,6 +11,7 @@ export default function HomeLayout({
   return (
     <div className="relative flex min-h-screen flex-col">
       <Header />
+      <meta name="google-adsense-account" content="ca-pub-6435811821902528"></meta>
       <main className="flex-1">{children}</main>
       <Footer />
     </div>
