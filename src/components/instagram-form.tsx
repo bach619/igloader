@@ -36,50 +36,30 @@ const useFormSchema = () => {
     url: z
       .string({ required_error: t("url.validation.required") })
       .trim()
-      .min(1, {
-        message: t("url.validation.required"),
-      })
+      .min(1, { message: t("url.validation.required") })
       .startsWith("https://www.instagram.com", t("url.validation.invalid"))
-      .refine(
-        (value) => {
-          return isShortcodePresent(value);
-        },
-        { message: t("url.validation.invalid") }
-      ),
+      .refine((value) => isShortcodePresent(value), {
+        message: t("url.validation.invalid"),
+      }),
   });
 };
 
 function triggerDownload(videoUrl: string) {
-  // Ensure we are in a browser environment
   if (typeof window === "undefined") return;
 
   const randomTime = new Date().getTime().toString().slice(-8);
-  const filename = `IG-Loader-${randomTime}.mp-4`;
+  const filename = `IG-Loader-${randomTime}.mp4`;
 
-  // Construct the URL to your proxy API route
-  const proxyUrl = new URL("/api/download-proxy", window.location.origin); // Use relative path + origin
+  const proxyUrl = new URL("/api/download-proxy", window.location.origin);
   proxyUrl.searchParams.append("url", videoUrl);
   proxyUrl.searchParams.append("filename", filename);
 
-  console.log("Using proxy URL:", proxyUrl.toString()); // For debugging
-
   const link = document.createElement("a");
-  // Set href to your proxy route
   link.href = proxyUrl.toString();
   link.target = "_blank";
-
-  // The 'download' attribute here is less critical because the proxy
-  // sets the Content-Disposition header, but it can still be helpful
-  // as a fallback or hint for the browser. Keep the desired filename.
   link.setAttribute("download", filename);
-
-  // Append link to the body temporarily
   document.body.appendChild(link);
-
-  // Programmatically click the link to trigger the download
   link.click();
-
-  // Clean up and remove the link
   document.body.removeChild(link);
 }
 
@@ -96,7 +76,7 @@ async function downloadWithBlob(videoUrl: string) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  } catch (e) {
+  } catch {
     toast.error("Download gagal via blob. Silakan coba beberapa saat lagi.", {
       id: "toast-blob-error",
       position: "top-center",
@@ -112,7 +92,7 @@ type CachedUrl = {
   };
 };
 
-export function InstagramForm(props: { className?: string }) {
+export function InstagramForm({ className }: { className?: string }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const cachedUrls = React.useRef(new Map<string, CachedUrl>());
 
@@ -126,7 +106,7 @@ export function InstagramForm(props: { className?: string }) {
 
   const formSchema = useFormSchema();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.infer<ReturnType<typeof useFormSchema>>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       url: "",
@@ -134,7 +114,6 @@ export function InstagramForm(props: { className?: string }) {
   });
 
   const errorMessage = form.formState.errors.url?.message;
-
   const isDisabled = isPending || !form.formState.isDirty;
   const isShowClearButton = form.watch("url").length > 0;
 
@@ -149,7 +128,7 @@ export function InstagramForm(props: { className?: string }) {
     videoUrl?: string,
     invalid?: CachedUrl["invalid"]
   ) {
-    cachedUrls.current?.set(shortcode, {
+    cachedUrls.current.set(shortcode, {
       videoUrl,
       expiresAt: Date.now() + CACHE_TIME,
       invalid,
@@ -157,48 +136,39 @@ export function InstagramForm(props: { className?: string }) {
   }
 
   function getCachedUrl(shortcode: string) {
-    const cachedUrl = cachedUrls.current?.get(shortcode);
-
-    if (!cachedUrl) {
-      return null;
-    }
-
-    if (cachedUrl.expiresAt < Date.now()) {
+    const cached = cachedUrls.current.get(shortcode);
+    if (!cached || cached.expiresAt < Date.now()) {
       cachedUrls.current.delete(shortcode);
       return null;
     }
-
-    return cachedUrl;
+    return cached;
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (isError) {
-      toast.dismiss("toast-error");
-    }
+    if (isError) toast.dismiss("toast-error");
 
     const shortcode = getPostShortcode(values.url);
-
     if (!shortcode) {
       form.setError("url", { message: t("inputs.url.validation.invalid") });
       return;
     }
 
-    const cachedUrl = getCachedUrl(shortcode);
-    if (cachedUrl?.invalid) {
-      form.setError("url", { message: t(cachedUrl.invalid.messageKey) });
+    const cached = getCachedUrl(shortcode);
+    if (cached?.invalid) {
+      form.setError("url", { message: t(cached.invalid.messageKey) });
       return;
     }
-
-    if (cachedUrl?.videoUrl) {
-      triggerDownload(cachedUrl.videoUrl);
+    if (cached?.videoUrl) {
+      triggerDownload(cached.videoUrl);
       return;
     }
 
     try {
-      const { data, status } = await getInstagramPost({ shortcode });
+      const response = await getInstagramPost({ shortcode });
 
-      if (status === HTTP_CODE_ENUM.OK) {
-        const downloadUrl = data.data.xdt_shortcode_media.video_url;
+      if (response.status === HTTP_CODE_ENUM.OK) {
+        const downloadUrl =
+          response.data.data.xdt_shortcode_media.video_url;
         if (downloadUrl) {
           triggerDownload(downloadUrl);
           setCachedUrl(shortcode, downloadUrl);
@@ -210,26 +180,22 @@ export function InstagramForm(props: { className?: string }) {
         } else {
           throw new Error("Video URL not found");
         }
-      } else if (
-        status === HTTP_CODE_ENUM.NOT_FOUND ||
-        status === HTTP_CODE_ENUM.BAD_REQUEST ||
-        status === HTTP_CODE_ENUM.TOO_MANY_REQUESTS ||
-        status === HTTP_CODE_ENUM.INTERNAL_SERVER_ERROR
-      ) {
-        const errorMessageKey = `serverErrors.${data.error}`;
+      } else {
+        const errorData = response.data as { error: string };
+        const errorMessageKey = `serverErrors.${errorData.error}`;
         form.setError("url", { message: t(errorMessageKey) });
+
         if (
-          status === HTTP_CODE_ENUM.BAD_REQUEST ||
-          status === HTTP_CODE_ENUM.NOT_FOUND
+          response.status === HTTP_CODE_ENUM.BAD_REQUEST ||
+          response.status === HTTP_CODE_ENUM.NOT_FOUND
         ) {
-          setCachedUrl(shortcode, undefined, {
-            messageKey: errorMessageKey,
-          });
+          setCachedUrl(shortcode, undefined, { messageKey: errorMessageKey });
         }
-        // Fallback download via blob jika rate limit dan URL video sudah ada di cache
-        if (status === HTTP_CODE_ENUM.TOO_MANY_REQUESTS) {
-          if (cachedUrl?.videoUrl) {
-            await downloadWithBlob(cachedUrl.videoUrl);
+
+        if (response.status === HTTP_CODE_ENUM.TOO_MANY_REQUESTS) {
+          const cachedAgain = getCachedUrl(shortcode);
+          if (cachedAgain?.videoUrl) {
+            await downloadWithBlob(cachedAgain.videoUrl);
           } else {
             toast.error(t("toasts.error"), {
               id: "toast-blob-unavailable",
@@ -237,8 +203,6 @@ export function InstagramForm(props: { className?: string }) {
             });
           }
         }
-      } else {
-        throw new Error("Failed to fetch video");
       }
     } catch (error) {
       console.error(error);
@@ -255,7 +219,7 @@ export function InstagramForm(props: { className?: string }) {
   }, []);
 
   return (
-    <div className={cn("w-full space-y-2", props.className)}>
+    <div className={cn("w-full space-y-2", className)}>
       {errorMessage ? (
         <p className="h-4 text-sm text-red-500 sm:text-start">{errorMessage}</p>
       ) : (
@@ -269,7 +233,6 @@ export function InstagramForm(props: { className?: string }) {
           <FormField
             control={form.control}
             name="url"
-            rules={{ required: true }}
             render={({ field }) => (
               <FormItem className="w-full">
                 <FormLabel className="sr-only">
