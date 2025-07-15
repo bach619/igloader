@@ -7,42 +7,30 @@ import { ReactQueryProvider } from "@/features/react-query/react-query-provider"
 import { cn } from "@/lib/utils";
 import { siteMetadata } from "@/lib/site";
 import { getLocale, getMessages } from "next-intl/server";
-import Script from "next/script"; // ✅ Aktifkan untuk GA
 import "./globals.css";
 
 const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
   subsets: ["latin"],
+  variable: "--font-dm-sans",
+  display: "swap", // Optional: Improves performance
 });
 
 export const metadata: Metadata = siteMetadata;
 
 export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   const locale = await getLocale();
   const messages = await getMessages();
 
   return (
     <html lang={locale} className="scroll-smooth" suppressHydrationWarning>
-      <body className={cn("antialiased", dmSans.variable)}>
-        {/* ✅ Google Analytics 4 */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-1342XW5PJX"
-          strategy="afterInteractive"
-        />
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-1342XW5PJX');
-          `}
-        </Script>
-        <meta name="google-adsense-account" content="ca-pub-6435811821902528"></meta>
-
+      <head>
+        <meta name="google-adsense-account" content="ca-pub-6435811821902528" />
+      </head>
+      <body className={cn("antialiased", dmSans.variable)} suppressHydrationWarning>
         <LocaleProvider locale={locale} messages={messages}>
           <ThemeProvider defaultTheme="light" enableSystem={false}>
             <ReactQueryProvider>
